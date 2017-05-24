@@ -1,5 +1,8 @@
 package com.example.ahmedessam.moviedbflow;
 
+import android.support.v4.app.FragmentTransaction;
+import android.support.v4.view.ViewPager;
+import android.support.v7.app.ActionBar;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.support.v7.widget.LinearLayoutManager;
@@ -34,116 +37,65 @@ import retrofit2.Retrofit;
 import retrofit2.converter.gson.GsonConverterFactory;
 
 public class MovieListActivity extends AppCompatActivity {
-    private RecyclerView recyclerView;
-    private MovieAdapter movieAdapter;
-    private final String BaseURL = "https://api.themoviedb.org/3/movie/";
-    Call<MovieResponse> movieResponseCall;
+    ViewPager mViewPager;
 
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        final ActionBar actionBar = getSupportActionBar();
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_movie_list);
-        recyclerView = (RecyclerView) findViewById(R.id.reecyclerview_main);
+        DemoCollectionPagerAdapter mDemoCollectionPagerAdapter;
+//        ViewPager mViewPager;
 
-        recyclerView.setHasFixedSize(true);
-        recyclerView.setLayoutManager(new LinearLayoutManager(MovieListActivity.this));
-        movieAdapter = new MovieAdapter(MovieListActivity.this);
-        recyclerView.setAdapter(movieAdapter);
 
-        if (Connectivity.isConnected(this)){
-
-            FeachMovies();
-
-        }else{
-            feachFromDB();
-
-        }
-    }
-
-    public void FeachMovies() {
-        HttpLoggingInterceptor httpLoggingInterceptor = new HttpLoggingInterceptor();
-        httpLoggingInterceptor.setLevel(HttpLoggingInterceptor.Level.BODY);
-        Interceptor interceptor = new Interceptor() {
+        // ViewPager and its adapters use support library
+        // fragments, so use getSupportFragmentManager.
+        mDemoCollectionPagerAdapter =
+                new DemoCollectionPagerAdapter(
+                        getSupportFragmentManager());
+        mViewPager = (ViewPager) findViewById(R.id.pager);
+        mViewPager.setAdapter(mDemoCollectionPagerAdapter);
+        mViewPager.setOnPageChangeListener(
+                new ViewPager.SimpleOnPageChangeListener() {
+                    @Override
+                    public void onPageSelected(int position) {
+                        // When swiping between pages, select the
+                        // corresponding tab.
+                        getSupportActionBar().setSelectedNavigationItem(position);
+                    }
+                });
+        actionBar.setNavigationMode(ActionBar.NAVIGATION_MODE_TABS);
+        ActionBar.TabListener tabListener = new ActionBar.TabListener() {
             @Override
-            public okhttp3.Response intercept(Chain chain) throws IOException {
-                Request requestBuilder = chain.request();
-                HttpUrl originalHttpUrl = requestBuilder.url();
+            public void onTabSelected(ActionBar.Tab tab, FragmentTransaction ft) {
 
-                HttpUrl url = originalHttpUrl.newBuilder()
-                        .addQueryParameter("api_key", "3284b4b68f95a2b481b8f180ef10cbe5")
-                        .build();
-                return chain.proceed(requestBuilder.newBuilder().url(url).build());
+                mViewPager.setCurrentItem(tab.getPosition());
+            }
+
+            @Override
+            public void onTabUnselected(ActionBar.Tab tab, FragmentTransaction ft) {
+
+            }
+
+            @Override
+            public void onTabReselected(ActionBar.Tab tab, FragmentTransaction ft) {
+
             }
         };
-        OkHttpClient.Builder okHttpClient = new OkHttpClient.Builder();
-        okHttpClient.addInterceptor(httpLoggingInterceptor);
-        okHttpClient.addInterceptor(interceptor);
-        Retrofit retrofit = new Retrofit.Builder().baseUrl(BaseURL)
-                .addConverterFactory(GsonConverterFactory.create())
-                .client(okHttpClient.build()).build();
-        NetworkMethods networkMethods = retrofit.create(NetworkMethods.class);
-        movieResponseCall = networkMethods.getAllMovies();
-        movieResponseCall.enqueue(new Callback<MovieResponse>() {
-            @Override
-            public void onResponse(Call<MovieResponse> call, Response<MovieResponse> response) {
-                if(response.body() != null) {
-                    MovieResponse movieResponse = response.body();
-                    List<Movie> movies = movieResponse.movies;
-                    Log.e("response", "onResponse: " + movies.size());
-                    movieAdapter.addAll(movies);
-
-                    insertToDataBase(movies);
-                }else{
-                    Log.e("response body", "onResponse: empty response");
-                }
-
+        for (int i = 0; i < 2; i++) {
+            if (i==1) {
+                actionBar.addTab(
+                        actionBar.newTab()
+                                .setText("GRIDVIEW")
+                                .setTabListener(tabListener));
+            }else{
+                actionBar.addTab(
+                        actionBar.newTab()
+                                .setText("LISTVIEW")
+                                .setTabListener(tabListener));
             }
-
-            @Override
-            public void onFailure(Call<MovieResponse> call, Throwable t) {
-                Log.e("retrofit", "onFailure: no response");
-
-            }
-        });
-
-
-    }
-
-//    public void updateView(List<Movie> movieList) {
-//        movieAdapter = new MovieAdapter(movieList);
-//        recyclerView.setAdapter(movieAdapter);
-//    }
-
-    @Override
-    protected void onStop() {
-        super.onStop();
-        if(!movieResponseCall.isCanceled()){
-            movieResponseCall.cancel();
         }
-
-    }
-    public void insertToDataBase(List<Movie> movieList)  {
-        Log.e("insert", "insertToDataBase: "+movieList.size());
-        if(movieList.size()==0){
-            Log.e("empty list", "insertToDataBase: "+movieList.size() );
-        }
-        else{
-
-            Movie.ClearDB();
-            for(int i=0 ;i <movieList.size();i++){
-                Movie movie = movieList.get(i);
-                movie.save();
-                Log.e("for", "inserttodb: "+i );
-            }
-
-        }
-    }
-    public void feachFromDB(){
-        Log.e("dbsize", "feachFromDB: enter" );
-        List<Movie> movies = SQLite.select().from(Movie.class).queryList();
-        Log.e("db size", "feachFromDB: "+movies.size() );
-        movieAdapter.addAll(movies);
     }
 
 

@@ -21,17 +21,25 @@ public class MovieAdapter extends RecyclerView.Adapter<MovieHolder> {
 
     private List<Movie> movieList;
     private Context context;
+    int fragmentIdent;
 
-    public MovieAdapter(Context context) {
+    public MovieAdapter(Context context,int ArgObject) {
         this.context = context;
         this.movieList = new ArrayList<>();
+        this.fragmentIdent = ArgObject;
     }
 
     @Override
     public MovieHolder onCreateViewHolder(ViewGroup parent, int viewType) {
         LayoutInflater layoutInflater = LayoutInflater.from(context);
-        View view = layoutInflater.inflate(R.layout.list_item_layout, parent, false);
-        return new MovieHolder(view,context);
+        if (fragmentIdent==1){
+            View view = layoutInflater.inflate(R.layout.list_item_layout, parent, false);
+            return new MovieHolder(view,context);
+        }else{
+            View view = layoutInflater.inflate(R.layout.grid_item_layout, parent, false);
+            return new MovieHolder(view,context);
+        }
+
     }
 
     @Override
